@@ -21,6 +21,8 @@ from flask import abort
 
 # Set up parser for input data (http://flask-restplus.readthedocs.io/en/stable/parsing.html)
 input_parser = MAX_API.model('ModelInput', {
+    'id': fields.List(fields.String, required=False,
+                        description='User-supplied identifier value so you can track inputs and outputs and map back to your own data'),
     'text': fields.List(fields.String, required=True,
                         description='List of user comments (strings) to be analyzed for toxicity.')
 })
@@ -49,13 +51,14 @@ label_prediction = MAX_API.model('LabelPrediction', {
 
 
 results_response = MAX_API.model("ModelResultResponse", {
+    'id': fields.String(reqired=False, description='User submitted identifier'),
     'original_text': fields.String(reqired=True, description='User submitted text'),
     'predictions': fields.Nested(label_prediction, description='Predicted labels and probabilities')
 })
 
 predict_response = MAX_API.model('ModelPredictResponse', {
     'status': fields.String(required=True, description='Response status message'),
-    'results': fields.List(fields.Nested(results_response), description='Original Text, predicted labels, and probabilities')
+    'results': fields.List(fields.Nested(results_response), description='Original Text, user-supplied identifier, predicted labels, and probabilities')
 })
 
 
@@ -91,7 +94,8 @@ class ModelPredictAPI(PredictAPI):
             output = self.model_wrapper.predict(input_json['text'])
             result['results'] = []
             for i in range(len(output)):
-                res = {'original_text': input_json['text'][i],
+                res = {'id': input_json['id'][i],
+                       'original_text': input_json['text'][i],
                        'predictions': output[i]}
                 result['results'].append(res)
             result['status'] = 'ok'
